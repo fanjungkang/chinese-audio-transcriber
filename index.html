@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中文音频转逐字稿 - 免费在线工具</title>
+    <meta name="description" content="上传中文音频，生成带时间轴的逐字稿，支持下载TXT/SRT格式">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-microphone-alt"></i> 中文音频转逐字稿</h1>
+            <p class="subtitle">上传音频 → 自动转写 → 下载文档 | 支持MP3, WAV, M4A格式</p>
+        </header>
+
+        <!-- 功能卡片 -->
+        <div class="card">
+            <h2><i class="fas fa-upload"></i> 上传音频文件</h2>
+            
+            <!-- 上传区域 -->
+            <div class="upload-area" id="dropArea">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <input type="file" id="audioFile" accept=".mp3,.wav,.m4a,.ogg" hidden>
+                <label for="audioFile" class="upload-btn">
+                    点击选择文件
+                </label>
+                <p class="upload-hint">或拖放文件到此处</p>
+                <p class="file-types">支持格式：MP3, WAV, M4A, OGG | 最大 50MB</p>
+            </div>
+            
+            <!-- 文件信息 -->
+            <div id="fileInfo" class="file-info hidden">
+                <div class="file-details">
+                    <i class="fas fa-file-audio"></i>
+                    <div>
+                        <span id="fileName"></span>
+                        <small id="fileSize"></small>
+                    </div>
+                    <button class="btn-icon" onclick="clearFile()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 音频播放器 -->
+            <div id="player" class="player-container hidden">
+                <h3><i class="fas fa-play-circle"></i> 音频预览</h3>
+                <div class="audio-player">
+                    <audio id="audioPlayer" controls></audio>
+                    <div class="audio-controls">
+                        <button class="btn-small" onclick="document.getElementById('audioPlayer').play()">
+                            <i class="fas fa-play"></i> 播放
+                        </button>
+                        <button class="btn-small" onclick="document.getElementById('audioPlayer').pause()">
+                            <i class="fas fa-pause"></i> 暂停
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 转写选项 -->
+        <div class="card">
+            <h2><i class="fas fa-cog"></i> 转写设置</h2>
+            <div class="settings">
+                <div class="setting-item">
+                    <label for="language">
+                        <i class="fas fa-language"></i> 语言选择
+                    </label>
+                    <select id="language">
+                        <option value="zh" selected>普通话</option>
+                        <option value="zh-TW">台湾普通话</option>
+                        <option value="yue">粤语</option>
+                        <option value="en">英语</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label for="model">
+                        <i class="fas fa-brain"></i> 识别精度
+                    </label>
+                    <select id="model">
+                        <option value="tiny" selected>快速模式（速度最快）</option>
+                        <option value="base">基础模式</option>
+                        <option value="small">标准模式（推荐）</option>
+                        <option value="medium">高质量模式</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label>
+                        <i class="fas fa-clock"></i> 包含时间戳
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="timestamps" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="action-buttons">
+            <button id="transcribeBtn" class="btn-primary" disabled>
+                <i class="fas fa-magic"></i> 开始转写
+            </button>
+            <button id="clearBtn" class="btn-secondary" onclick="clearAll()">
+                <i class="fas fa-trash-alt"></i> 清空全部
+            </button>
+        </div>
+
+        <!-- 加载状态 -->
+        <div id="loading" class="loading-container hidden">
+            <div class="spinner"></div>
+            <h3>正在处理您的音频...</h3>
+            <p>这可能需要几分钟时间，请耐心等待</p>
+            <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <p class="progress-text" id="progressText">初始化中...</p>
+        </div>
+
+        <!-- 结果区域 -->
+        <div id="result" class="card hidden">
+            <div class="result-header">
+                <h2><i class="fas fa-file-alt"></i> 转写结果</h2>
+                <div class="result-stats">
+                    <span><i class="fas fa-clock"></i> 时长: <span id="audioDuration">--:--</span></span>
+                    <span><i class="fas fa-font"></i> 字数: <span id="wordCount">0</span></span>
+                </div>
+            </div>
+
+            <!-- 逐字稿显示区域 -->
+            <div class="transcript-container">
+                <div class="transcript-header">
+                    <h3><i class="fas fa-align-left"></i> 逐字稿（带时间轴）</h3>
+                    <button class="btn-icon" onclick="copyTranscript()" title="复制全文">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <div class="transcript" id="transcript">
+                    <!-- 逐字稿内容将在这里动态显示 -->
+                    <div class="empty-transcript">
+                        <i class="fas fa-headphones"></i>
+                        <p>转写结果将显示在这里</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 下载选项 -->
+            <div class="download-section">
+                <h3><i class="fas fa-download"></i> 下载文档</h3>
+                <div class="download-buttons">
+                    <button class="download-btn txt" id="downloadTxt">
+                        <i class="fas fa-file-text"></i>
+                        <span>TXT 文档</span>
+                        <small>纯文本格式</small>
+                    </button>
+                    <button class="download-btn srt" id="downloadSrt">
+                        <i class="fas fa-closed-captioning"></i>
+                        <span>SRT 字幕</span>
+                        <small>视频字幕格式</small>
+                    </button>
+                    <button class="download-btn json" id="downloadJson">
+                        <i class="fas fa-code"></i>
+                        <span>JSON 数据</span>
+                        <small>完整数据</small>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 使用说明 -->
+        <div class="card info-card">
+            <h2><i class="fas fa-info-circle"></i> 使用说明</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h4>上传音频</h4>
+                    <p>点击上方区域或拖放音频文件</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h4>开始转写</h4>
+                    <p>点击"开始转写"按钮</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h4>获取结果</h4>
+                    <p>查看和下载逐字稿</p>
+                </div>
+            </div>
+            <div class="notice">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p><strong>隐私说明：</strong>所有音频处理均在浏览器本地完成，不会上传到服务器。</p>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2025 中文音频转逐字稿工具 | 
+                <a href="https://github.com/你的用户名/chinese-audio-transcriber" target="_blank">
+                    <i class="fab fa-github"></i> GitHub 项目
+                </a>
+            </p>
+            <p class="footer-note">
+                基于 Web Speech API 和 Whisper 技术 | 完全免费使用
+            </p>
+        </footer>
+    </div>
+
+    <!-- 消息提示 -->
+    <div id="toast" class="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
